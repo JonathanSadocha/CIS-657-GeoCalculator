@@ -1,7 +1,8 @@
 import React, { useState, useRef,   useEffect } from "react";
-import { StyleSheet, Text, Keyboard, TouchableOpacity, View, TouchableWithoutFeedback } from "react-native";
+import { StyleSheet, Text, Keyboard, TouchableOpacity, View, TouchableWithoutFeedback, Image } from "react-native";
 import { Button, Input } from "react-native-elements";
 import { Feather } from "@expo/vector-icons";
+import { getWeather } from "../api/weatherServer";
 import {
     initRecordDB,
     storeRecordItem,
@@ -10,6 +11,24 @@ import {
     deleteRecord,
   } from '../helpers/fb-calc';
 
+const ICONS = {
+  img01d: require('../images/img01d.png'),
+  img01n: require('../images/img01n.png'),
+  img02d: require('../images/img02d.png'),
+  img02n: require('../images/img02n.png'),
+  img03d: require('../images/img03d.png'),
+  img03n: require('../images/img03n.png'),
+  img04d: require('../images/img04d.png'),
+  img04n: require('../images/img04n.png'),
+  img09d: require('../images/img09d.png'),
+  img09n: require('../images/img09n.png'),
+  img10d: require('../images/img10d.png'),
+  img10n: require('../images/img10n.png'),
+  img13d: require('../images/img13d.png'),
+  img13n: require('../images/img13n.png'),
+  img50d: require('../images/img13d.png'),
+  img50n: require('../images/img13n.png'),
+ };
 
 const CalculatorScreen = ({ route, navigation }) => {
   const [state, setState] = useState({
@@ -20,9 +39,11 @@ const CalculatorScreen = ({ route, navigation }) => {
     distance: "",
     bearing: "",
   });
-
+  
   const [bearingUnits, setBearingUnits] = useState("Degrees");
   const [distanceUnits, setDistanceUnits] = useState("Kilometers");
+  const [fromWeather, setFromWeather] = useState("");
+  const [toWeather, setToWeather] = useState("");
 
   const initialField = useRef(null);
 
@@ -120,6 +141,13 @@ const CalculatorScreen = ({ route, navigation }) => {
     }
   }
 
+  function editDataDown(data){
+    let {description, icon} = data.weather[0];
+    let temperature = data.main.temp;
+
+    return {icon,description,temperature};
+  }
+
   function doCalculation(dUnits,bUnits) {
     if (formValid(state)) {
       var p1 = {
@@ -130,6 +158,13 @@ const CalculatorScreen = ({ route, navigation }) => {
         lat: parseFloat(state.lat2),
         lon: parseFloat(state.lon2),
       };
+
+      getWeather(p1.lat, p1.lon, (data) => {
+        setFromWeather(editDataDown(data));
+      });
+      getWeather(p2.lat, p2.lon, (data) => {
+        setToWeather(editDataDown(data));
+      });
 
         var date = getCurDate();
         storeRecordItem({
@@ -148,8 +183,30 @@ const CalculatorScreen = ({ route, navigation }) => {
         distance: `${round(dist*dConv,3)} ${dUnits}`,
         bearing: `${round(bear*bConv, 3)} ${bUnits}`,
       });
+
     }
   }
+
+  const renderWeather = (weather) => {
+    if (weather.icon === '') {
+      return <View></View>;
+    } else {
+      return (
+        <View style={styles.weatherView}>
+          <Image
+            style={{ width: 100, height: 100 }}
+            source={ICONS['img' + weather.icon]}
+          />
+          <View>
+            <Text style={{ fontSize: 56, fontWeight: 'bold' }}>
+              {round(weather.temperature,0)}
+            </Text>
+            <Text> {weather.description} </Text>
+          </View>
+        </View>
+      );
+    }
+  };
 
   function getCurDate(){
     var date = new Date().getDate();
@@ -251,6 +308,8 @@ const CalculatorScreen = ({ route, navigation }) => {
                 distance: '',
                 bearing: '',
               });
+              setFromWeather('')
+              setToWeather('')
             }}
           />
         </View>
@@ -268,6 +327,12 @@ const CalculatorScreen = ({ route, navigation }) => {
             <Text style={styles.resultsValueText}>{state.bearing}</Text>
           </View>
         </View>
+        <View>
+        <View>
+          {renderWeather(fromWeather)}
+          {renderWeather(toWeather)}
+        </View>
+        </View>
       </View>
     </TouchableWithoutFeedback>
   );
@@ -280,7 +345,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   buttons: {
-    padding: 10,
+    marginTop: 10,
+    marginBottom: 10,
   },
   inputError: {
     color: 'red',
@@ -316,6 +382,20 @@ const styles = StyleSheet.create({
   headerButton: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  weatherView: {
+    flexDirection: 'row',
+    backgroundColor: '#91AAB4',
+    marginTop: 5,
+    marginBottom: 5,
+    borderRightWidth: 1,
+    borderRightColor: '#000',
+    borderLeftWidth:1,
+    borderLeftColor: '#000',
+    borderBottomWidth:1,
+    borderBottomColor: '#000',
+    borderTopWidth:1,
+    borderTopColor: '#000',
   },
 });
 
